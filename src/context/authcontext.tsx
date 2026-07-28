@@ -1,58 +1,42 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabaseClient';
-import { toFakeEmail} from "../lib/auth.tsx";
+// src/contexts/AuthContext.tsx
+import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
+import * as authApi from '../api/auth';
+import type { User } from '../type/type';
 
-interface AuthContextType {
-    user: User | null;
-    loading: boolean;
-    signUp: (id: string, password: string) => Promise<void>;
-    signIn: (id: string, password: string) => Promise<void>;
-    signOut: () => Promise<void>;
-}
+    interface AuthContextType {
+        user: User | null;
+        signUp: (username: string, password: string) => Promise<void>;
+        signIn: (username: string, password: string) => Promise<void>;
+        signOut: () => void;
+    }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+    const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null);
-            setLoading(false);
+    export function AuthProvider({ children }: { children: ReactNode }) {
+        const [user, setUser] = useState<User | null>(() => {
+            const saved = localStorage.getItem('user');
+            return saved ? JSON.parse(saved) : null;
         });
 
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-        });
+        useEffect(() => {
+            if (user) localStorage.setItem('user', JSON.stringify(user));
+            else localStorage.removeItem('user');
+        }, [user]);
 
-        return () => listener.subscription.unsubscribe();
-    }, []);
-
-    const signUp = async (id: string, password: string) => {
-        const { error } = await supabase.auth.signUp({
-            email: toFakeEmail(id),
-            password,
-        });
-        if (error) throw error;
+        const signUp = async (username: string, password: string) => {
+        const newUser = await authApi.signUp(username, password);
+        setUser(newUser);
     };
 
-    const signIn = async (id: string, password: string) => {
-        const { error } = await supabase.auth.signInWithPassword({
-            email: toFakeEmail(id),
-            password,
-        });
-        if (error) throw error;
+    const signIn = async (username: string, password: string) => {
+        const loggedInUser = await authApi.signIn(username, password);
+        setUser(loggedInUser);
     };
 
-    const signOut = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-    };
+    const signOut = () => setUser(null);
 
     return (
-        <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
+        <AuthContext.Provider value={{ user, signUp, signIn, signOut }}>
             {children}
         </AuthContext.Provider>
     );
