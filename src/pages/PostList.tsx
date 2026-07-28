@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getPosts } from '../api/post';
 import { PATHS } from "../router/path.ts";
-import type { Post } from '../type/type';
+import {CATEGORIES, type Post} from '../type/type';
 import Input from "../components/Input.tsx";
 import Button from "../components/button.tsx";
 const PAGE_SIZE = 8;
@@ -18,17 +18,30 @@ export default function PostList() {
 
     const page = Number(searchParams.get('page') ?? '1');
     const search = searchParams.get('q') ?? '';
+    const category = searchParams.get('category') ?? undefined;
 
     useEffect(() => {
         setLoading(true);
-        getPosts(page, PAGE_SIZE, search)
+        getPosts(page, PAGE_SIZE, search, category)
             .then(({ posts, totalCount }) => {
                 setPosts(posts);
                 setTotalCount(totalCount);
             })
             .catch((err) => console.error('getPosts error:', err))
             .finally(() => setLoading(false));
-    }, [page, search]);
+    }, [page, search, category]);
+
+
+    // useEffect(() => {
+    //     setLoading(true);
+    //     getPosts(page, PAGE_SIZE, search)
+    //         .then(({ posts, totalCount }) => {
+    //             setPosts(posts);
+    //             setTotalCount(totalCount);
+    //         })
+    //         .catch((err) => console.error('getPosts error:', err))
+    //         .finally(() => setLoading(false));
+    // }, [page, search]);
 
     const setPage = (p: number) => {
         setSearchParams((prev) => {
@@ -70,7 +83,27 @@ export default function PostList() {
                     글쓰기
                 </Button>
             </div>
-
+            <div className="flex gap-2 mb-4 flex-wrap">
+                {CATEGORIES.map((cat) => (
+                    <button
+                        key={cat}
+                        onClick={() => setSearchParams((prev) => {
+                            const next = new URLSearchParams(prev);
+                            if (category === cat) next.delete('category');
+                            else next.set('category', cat);
+                            next.set('page', '1');
+                            return next;
+                        })}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-150 ${
+                            category === cat
+                                ? 'bg-[#5B5BD6] text-white'
+                                : 'bg-white border border-[#E7E5DF] text-[#78716C] hover:bg-[#F6F4EF]'
+                        }`}
+                    >
+                        {cat}
+                    </button>
+                ))}
+            </div>
             {/* 검색 */}
             <form onSubmit={handleSearch} className="flex gap-2 mb-6">
                 <Input
