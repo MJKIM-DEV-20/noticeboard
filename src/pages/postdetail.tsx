@@ -40,7 +40,7 @@ export default function PostDetail() {
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-[#E7E5DF] p-8">
-            <h2 className="text-2xl font-bold text-[#1C1917]">{post.title}</h2>
+            <h2 className="text-2xl font-bold text-[#1C1917] break-words">{post.title}</h2>
             <div className="flex items-center gap-2 text-sm text-[#78716C] mt-2 pb-4 border-b border-[#E7E5DF]">
                 <span>{post.users?.username ?? '알수없음'}</span>
                 <span>·</span>
@@ -48,7 +48,7 @@ export default function PostDetail() {
                 <span>·</span>
                 <span>조회 {post.views}</span>
             </div>
-            <p className="text-[#1C1917] leading-relaxed whitespace-pre-wrap mt-6 mb-8">
+            <p className="text-[#1C1917] leading-relaxed whitespace-pre-wrap break-words mt-6 mb-8">
                 {post.content}
             </p>
             {isOwner && (

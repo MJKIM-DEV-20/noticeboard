@@ -11,6 +11,8 @@ import type { Post } from '../type/type';
 const PAGE_SIZE = 8;
 const GROUP_SIZE = 5;
 
+
+
 export default function MyPage() {
     const { user, updateUser } = useAuth();
     const [myPosts, setMyPosts] = useState<Post[]>([]);
@@ -46,6 +48,13 @@ export default function MyPage() {
             return next;
         });
     };
+
+
+    function truncateText(text: string, maxLength: number) {
+        if (text.length <= maxLength) return text;
+        return text.slice(0, maxLength) + '...';
+    }
+
 
     const handleUpdateUsername = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -154,7 +163,7 @@ export default function MyPage() {
                                     to={PATHS.POST_DETAIL(post.id)}
                                     className="flex items-center justify-between px-5 py-4 hover:bg-[#F6F4EF] transition-colors duration-150"
                                 >
-                                    <span className="text-[#1C1917] font-medium truncate">{post.title}</span>
+                                    <span className="text-[#1C1917] font-medium truncate">{truncateText(post.title, 30)}</span>
                                     <span className="text-[#78716C] text-sm shrink-0 ml-4">
                     {new Date(post.created_at).toLocaleDateString()}
                   </span>

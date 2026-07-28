@@ -71,6 +71,12 @@ export default function PostList() {
         (_, i) => groupStart + i
     );
 
+    function truncateText(text: string, maxLength: number) {
+        if (text.length <= maxLength) return text;
+        return text.slice(0, maxLength) + '...';
+    }
+
+
     return (
         <div>
             {/* 헤더 */}
@@ -153,7 +159,7 @@ export default function PostList() {
                                     </p>
                                 </div>
                             </div>
-                            <h3 className="text-lg font-bold text-[#1C1917] mb-1.5">{post.title}</h3>
+                            <h3 className="text-lg font-bold text-[#1C1917] mb-1.5">{truncateText(post.title, 30)}</h3>
                             <p className="text-[#78716C] text-sm line-clamp-2 mb-2">{post.content}</p>
                             <p className="text-xs text-[#78716C] flex items-center gap-1">
                                 <i className="ti ti-eye" style={{ fontSize: 14 }}></i>
