@@ -170,7 +170,6 @@ export default function MyPage() {
                                 </Link>
                             ))}
                         </div>
-
                         {totalPages > 1 && (
                             <div className="flex justify-center gap-1.5 mt-6">
                                 <button
