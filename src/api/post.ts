@@ -1,14 +1,31 @@
 // src/api/post.ts
 import { supabase } from '../lib/supabaseClient';
 import type { Post, PostInput } from '../type/type';
-export async function getPosts(): Promise<Post[]> {
+// export async function getPosts(): Promise<Post[]> {
+//     const { data, error } = await supabase
+//         .from('posts')
+//         .select('*, users(username)')
+//         .order('created_at', { ascending: false });
+//     if (error) throw error;
+//     return data;
+// }
+//
+
+export async function incrementViews(id: string) {
+    const { error } = await supabase.rpc('increment_views', { post_id: id });
+    if (error) console.error('조회수 증가 실패:', error);
+}
+
+export async function getTopViewedPosts(limit = 5): Promise<Post[]> {
     const { data, error } = await supabase
         .from('posts')
         .select('*, users(username)')
-        .order('created_at', { ascending: false });
+        .order('views', { ascending: false })
+        .limit(limit);
     if (error) throw error;
     return data;
 }
+
 
 export async function getPost(id: string): Promise<Post> {
     const { data, error } = await supabase
@@ -17,8 +34,43 @@ export async function getPost(id: string): Promise<Post> {
         .eq('id', id)
         .single();
     if (error) throw error;
+
+    incrementViews(id); // 조회 후 비동기로 조회수 증가 (기다릴 필요 없음)
     return data;
 }
+
+
+
+export async function getPosts(page: number, pageSize: number, search?: string) {
+    let query = supabase
+        .from('posts')
+        .select('*, users(username)', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+    if (search?.trim()) {
+        query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
+    }
+
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error, count } = await query.range(from, to);
+    if (error) throw error;
+
+    return { posts: data as Post[], totalCount: count ?? 0 };
+}
+
+export async function getMyPosts(userId: string): Promise<Post[]> {
+    const { data, error } = await supabase
+        .from('posts')
+        .select('*, users(username)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+}
+
+
 
 export async function createPost(post: PostInput, userId: string | undefined): Promise<Post> {
     if (!userId) throw new Error('로그인이 필요합니다.');

@@ -3,27 +3,30 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from '
 import * as authApi from '../api/auth';
 import type { User } from '../type/type';
 
-    interface AuthContextType {
-        user: User | null;
-        signUp: (username: string, password: string) => Promise<void>;
-        signIn: (username: string, password: string) => Promise<void>;
-        signOut: () => void;
-    }
+interface AuthContextType {
+    user: User | null;
+    loading: boolean;
+    signUp: (username: string, password: string) => Promise<void>;
+    signIn: (username: string, password: string) => Promise<void>;
+    signOut: () => void;
+}
 
-    const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-    export function AuthProvider({ children }: { children: ReactNode }) {
-        const [user, setUser] = useState<User | null>(() => {
-            const saved = localStorage.getItem('user');
-            return saved ? JSON.parse(saved) : null;
-        });
+export function AuthProvider({ children }: { children: ReactNode }) {
+    const [user, setUser] = useState<User | null>(() => {
+        const saved = localStorage.getItem('user');
+        return saved ? JSON.parse(saved) : null;
+    });
 
-        useEffect(() => {
-            if (user) localStorage.setItem('user', JSON.stringify(user));
-            else localStorage.removeItem('user');
-        }, [user]);
+    const loading = false;
 
-        const signUp = async (username: string, password: string) => {
+    useEffect(() => {
+        if (user) localStorage.setItem('user', JSON.stringify(user));
+        else localStorage.removeItem('user');
+    }, [user]);
+
+    const signUp = async (username: string, password: string) => {
         const newUser = await authApi.signUp(username, password);
         setUser(newUser);
     };
@@ -36,7 +39,7 @@ import type { User } from '../type/type';
     const signOut = () => setUser(null);
 
     return (
-        <AuthContext.Provider value={{ user, signUp, signIn, signOut }}>
+        <AuthContext.Provider value={{ user, signUp, signIn, signOut, loading }}>
             {children}
         </AuthContext.Provider>
     );

@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+@import 'tailwindcss';
+
+body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background-color: #F6F4EF;
+    color: #1C1917;
+}
+
+/*!* 여기부터 원래 있던 나머지 내용 (600줄 넘는 tailwind 관련 코드) 그대로 *!*/
+/*@layer theme, base, components, utilities;*/
+/*@layer theme {*/
+/*    ...*/
+/*}*/
