@@ -1,32 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPost, deleteOwnPost} from "../api/post.ts";
+import { getPost, deleteOwnPost } from '../api/post';
 import { useAuth} from "../context/authcontext.tsx";
-import { PATHS } from '../router/path';
+import { PATHS} from "../router/path.ts";
 import type { Post } from '../type/type';
-
-
+import Button from "../components/button.tsx";
 export default function PostDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
     const [post, setPost] = useState<Post | null>(null);
 
-    // useEffect(() => {
-    //     if (id) getPost(id).then(setPost);
-    // }, [id]);
-
     useEffect(() => {
-        if (id) {
-            getPost(id)
-                .then(setPost)
-                .catch((err) => {
-                    console.error('getPost error:', err);
-                    setPost(null);
-                });
-        }
+        if (id) getPost(id).then(setPost);
     }, [id]);
-
 
     const handleDelete = async () => {
         if (!id || !user) return;
@@ -42,22 +29,31 @@ export default function PostDetail() {
 
     const handleEdit = () => {
         if (!id) return;
-        navigate(`/posts/${id}/edit`);
+        navigate(PATHS.POST_EDIT(id));
     };
 
-    if (!post) return <div>로딩중...</div>;
+    if (!post) {
+        return <div className="text-center text-[#78716C] py-20">로딩중...</div>;
+    }
+
     const isOwner = user?.id === post.user_id;
 
     return (
-        <div>
-            <h2>{post.title}</h2>
-            <p>작성자: {post.users?.username}</p>
-            <p>{post.content}</p>
+        <div className="bg-white rounded-2xl shadow-sm border border-[#E7E5DF] p-8">
+            <h2 className="text-2xl font-bold text-[#1C1917]">{post.title}</h2>
+            <div className="flex items-center gap-2 text-sm text-[#78716C] mt-2 pb-4 border-b border-[#E7E5DF]">
+                <span>{post.users?.username ?? '알수없음'}</span>
+                <span>·</span>
+                <span>{new Date(post.created_at).toLocaleDateString()}</span>
+            </div>
+            <p className="text-[#1C1917] leading-relaxed whitespace-pre-wrap mt-6 mb-8">
+                {post.content}
+            </p>
             {isOwner && (
-                <>
-                    <button onClick={handleEdit}>수정</button>
-                    <button onClick={handleDelete}>삭제</button>
-                </>
+                <div className="flex gap-2 justify-end">
+                    <Button variant="default" onClick={handleEdit}>수정</Button>
+                    <Button variant="danger" onClick={handleDelete}>삭제</Button>
+                </div>
             )}
         </div>
     );
