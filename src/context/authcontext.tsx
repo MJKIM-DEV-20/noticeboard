@@ -9,6 +9,7 @@ interface AuthContextType {
     signUp: (username: string, password: string) => Promise<void>;
     signIn: (username: string, password: string) => Promise<void>;
     signOut: () => void;
+    updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +27,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         else localStorage.removeItem('user');
     }, [user]);
 
+    const updateUser = (updatedUser: User) => {
+        setUser(updatedUser);
+    };
+
     const signUp = async (username: string, password: string) => {
         const newUser = await authApi.signUp(username, password);
         setUser(newUser);
@@ -39,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signOut = () => setUser(null);
 
     return (
-        <AuthContext.Provider value={{ user, signUp, signIn, signOut, loading }}>
+        <AuthContext.Provider value={{ user, signUp, signIn, signOut, loading, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

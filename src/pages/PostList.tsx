@@ -154,7 +154,11 @@ export default function PostList() {
                                 </div>
                             </div>
                             <h3 className="text-lg font-bold text-[#1C1917] mb-1.5">{post.title}</h3>
-                            <p className="text-[#78716C] text-sm line-clamp-2">{post.content}</p>
+                            <p className="text-[#78716C] text-sm line-clamp-2 mb-2">{post.content}</p>
+                            <p className="text-xs text-[#78716C] flex items-center gap-1">
+                                <i className="ti ti-eye" style={{ fontSize: 14 }}></i>
+                                조회 {post.views}
+                            </p>
                         </article>
                     ))}
                 </div>

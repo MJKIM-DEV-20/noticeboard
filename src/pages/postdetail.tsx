@@ -45,6 +45,8 @@ export default function PostDetail() {
                 <span>{post.users?.username ?? '알수없음'}</span>
                 <span>·</span>
                 <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                <span>·</span>
+                <span>조회 {post.views}</span>
             </div>
             <p className="text-[#1C1917] leading-relaxed whitespace-pre-wrap mt-6 mb-8">
                 {post.content}
