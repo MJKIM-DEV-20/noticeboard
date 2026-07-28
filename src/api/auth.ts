@@ -22,3 +22,12 @@ export async function signIn(username: string, password: string): Promise<User> 
     if (error) throw new Error('아이디 또는 비밀번호가 일치하지 않습니다.');
     return data;
 }
+
+export async function updateUsername(userId: string, password: string, newUsername: string) {
+    const { error } = await supabase.rpc('update_username', {
+        req_user_id: userId,
+        req_password: password,
+        new_username: newUsername,
+    });
+    if (error) throw error;
+}

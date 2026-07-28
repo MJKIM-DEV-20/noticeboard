@@ -31,7 +31,7 @@ export default function Home() {
                 {CATEGORIES.map((cat) => (
                     <button
                         key={cat}
-                        onClick={() => navigate(`${PATHS.POSTS}?q=${encodeURIComponent(cat)}`)}
+                        onClick={() => navigate(`${PATHS.POSTS}?category=${encodeURIComponent(cat)}`)}
                         className="block w-full text-left px-3 py-2 rounded-lg text-sm text-[#1C1917] hover:bg-white"
                     >
                         {cat}

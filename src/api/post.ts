@@ -41,7 +41,7 @@ export async function getPost(id: string): Promise<Post> {
 
 
 
-export async function getPosts(page: number, pageSize: number, search?: string) {
+export async function getPosts(page: number, pageSize: number, search?: string, category?: string) {
     let query = supabase
         .from('posts')
         .select('*, users(username)', { count: 'exact' })
@@ -50,24 +50,31 @@ export async function getPosts(page: number, pageSize: number, search?: string) 
     if (search?.trim()) {
         query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
     }
+    if (category) {
+        query = query.eq('category', category);
+    }
 
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
     const { data, error, count } = await query.range(from, to);
     if (error) throw error;
-
     return { posts: data as Post[], totalCount: count ?? 0 };
 }
 
-export async function getMyPosts(userId: string): Promise<Post[]> {
-    const { data, error } = await supabase
+export async function getMyPosts(userId: string, page: number, pageSize: number) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error, count } = await supabase
         .from('posts')
-        .select('*, users(username)')
+        .select('*, users(username)', { count: 'exact' })
         .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
     if (error) throw error;
-    return data;
+    return { posts: data as Post[], totalCount: count ?? 0 };
 }
 
 

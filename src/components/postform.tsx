@@ -4,9 +4,10 @@ import { createPost, updateOwnPost, getPost } from '../api/post';
 import { useAuth} from "../context/authcontext.tsx";
 import { validatePost } from '../utils/validation';
 import { PATHS} from "../router/path.ts";
-import type { Post, PostInput } from '../type/type';
+import type { Post, PostInput, } from '../type/type';
 import Button from './button';
 import Input from './Input';
+import { CATEGORIES } from '../type/type';
 
 export default function PostForm() {
     const { user } = useAuth();
@@ -14,13 +15,13 @@ export default function PostForm() {
     const navigate = useNavigate();
     const isEdit = Boolean(id);
 
-    const [form, setForm] = useState<PostInput>({ title: '', content: '' });
+    const [form, setForm] = useState<PostInput>({ title: '', content: '', category: '일상잡담' });
     const [error, setError] = useState('');
 
     useEffect(() => {
         if (id) {
             getPost(id).then((post: Post) => {
-                setForm({ title: post.title, content: post.content });
+                setForm({ title: post.title, content: post.content, category: post.category });
             });
         }
     }, [id]);
@@ -69,6 +70,17 @@ export default function PostForm() {
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     placeholder="제목"
                 />
+
+                <select
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value as any })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#E7E5DF] bg-white text-[#1C1917] outline-none focus:ring-2 focus:ring-[#5B5BD6]"
+                >
+                    {CATEGORIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                    ))}
+                </select>
+
                 <textarea
                     value={form.content}
                     onChange={(e) => setForm({ ...form, content: e.target.value })}

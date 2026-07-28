@@ -19,4 +19,6 @@ export const PATHS = {
     LOGIN: '/login',
     SIGNUP: '/signup',
     MYPAGE: '/mypage',
+    ADMIN: '/admin',
+    ADMINNOTICE: '/admin/notice',
 } as const;
