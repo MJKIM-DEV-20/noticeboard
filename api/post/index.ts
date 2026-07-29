@@ -7,10 +7,9 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Authorization: Bearer <JWT> 헤더를 자체 발급 토큰으로 검증
+// httpOnly 쿠키(token)에 담긴 JWT를 검증해서 로그인 유저 확인
 function getUserFromRequest(req: VercelRequest): { userId: string; username: string } | null {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.replace("Bearer ", "");
+    const token = req.cookies?.token;
     if (!token) return null;
 
     try {
@@ -36,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             let query = supabase
                 .from("posts")
                 .select(
-                    "id, title, category, is_notice, created_at, views, users(username)",
+                    "id, title, category, is_notice, created_at, views, image_url, users(username)",
                     { count: "exact" }
                 )
                 .order("created_at", { ascending: false });
@@ -61,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ posts: data, totalCount: count ?? 0 });
         }
 
-        // ── 글쓰기 (로그인 필요, 자체 JWT로 검증) ──
+        // ── 글쓰기 (로그인 필요, httpOnly 쿠키로 검증) ──
         if (req.method === "POST") {
             const user = getUserFromRequest(req);
 
@@ -69,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(401).json({ error: "로그인이 필요합니다." });
             }
 
-            const { title, content, category, is_notice } = req.body ?? {};
+            const { title, content, category, is_notice, image_url } = req.body ?? {};
 
             if (!title?.trim() || !content?.trim()) {
                 return res.status(400).json({ error: "제목과 내용을 입력해주세요." });
@@ -82,7 +81,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     content,
                     category,
                     is_notice: is_notice ?? false,
-                    user_id: user.userId, // 토큰에서 검증된 실제 사용자 id
+                    image_url: image_url ?? null,
+                    user_id: user.userId, // 쿠키에서 검증된 실제 사용자 id
                 })
                 .select()
                 .single();

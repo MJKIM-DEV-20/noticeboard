@@ -18,6 +18,9 @@ export interface Post {
     created_at: string;
     updated_at: string;
     views: number;
+    image_url?: string | null;
 }
 
-export type PostInput = Pick<Post, 'title' | 'content' | 'category'>;
+export type PostInput = Pick<Post, 'title' | 'content' | 'category'> & {
+    image_url?: string | null;
+};

@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
-import { createPost, updateOwnPost, deleteOwnPost, getPost } from '../api/post';
-import { useAuth } from "../context/authcontext.tsx";
+import { createPost, updateOwnPost, getPost } from '../api/post';
+import { uploadImage } from '../api/upload';
+import { useAuth} from "../context/authcontext.tsx";
 import { validatePost } from '../utils/validation';
-import { PATHS } from "../router/path.ts";
-import type { Post, PostInput } from '../type/type';
+import { PATHS} from "../router/path.ts";
+import type { Post, PostInput, } from '../type/type';
 import Button from './button';
 import Input from './Input';
-import { Modal } from './Modal';
 import { CATEGORIES } from '../type/type';
-import { getCategoryStyle } from '../utils/style';
-import toast from 'react-hot-toast';
-type ModalMode = 'edit' | 'delete' | null;
 
 export default function PostForm() {
     const { user } = useAuth();
@@ -19,34 +16,49 @@ export default function PostForm() {
     const navigate = useNavigate();
     const isEdit = Boolean(id);
 
-    const [form, setForm] = useState<PostInput>({ title: '', content: '', category: '일상잡담' });
+    const [form, setForm] = useState<PostInput>({ title: '', content: '', category: '일상잡담', image_url: null });
     const [error, setError] = useState('');
 
-    // 모달 관련 상태
-    const [modalMode, setModalMode] = useState<ModalMode>(null);
-    const [password, setPassword] = useState('');
-    const [modalError, setModalError] = useState('');
-    const [submitting, setSubmitting] = useState(false);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         if (id) {
             getPost(id).then((post: Post) => {
-                setForm({ title: post.title, content: post.content, category: post.category });
+                setForm({ title: post.title, content: post.content, category: post.category, image_url: post.image_url });
+                if (post.image_url) setImagePreview(post.image_url);
             });
         }
     }, [id]);
 
     if (!user) return <Navigate to={PATHS.LOGIN} replace />;
 
-    const closeModal = () => {
-        setModalMode(null);
-        setPassword('');
-        setModalError('');
-        setSubmitting(false);
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setError('이미지 파일만 업로드할 수 있습니다.');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setError('이미지 크기는 5MB 이하만 가능합니다.');
+            return;
+        }
+
+        setError('');
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
     };
 
-    // 글쓰기/수정 폼 제출 -> 수정이면 모달 오픈, 아니면 바로 생성
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleRemoveImage = () => {
+        setImageFile(null);
+        setImagePreview(null);
+        setForm({ ...form, image_url: null });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
@@ -56,185 +68,99 @@ export default function PostForm() {
             return;
         }
 
-        if (isEdit) {
-            setModalMode('edit');
-        } else {
-            handleCreate();
-        }
-    };
-
-    const handleCreate = async () => {
         try {
-            const newPost = await createPost(form);
-            toast.success('게시글이 등록되었습니다.');
-            navigate(PATHS.POST_DETAIL(newPost.id));
-        } catch (err) {
-            console.error(err);
-            setError('작성에 실패했습니다.');
-        }
-    };
+            let imageUrl = form.image_url ?? null;
 
-    const handleConfirmEdit = async () => {
-        if (!id) return;
-        if (!password) {
-            setModalError('비밀번호를 입력하세요.');
-            return;
-        }
-        setSubmitting(true);
-        setModalError('');
-        try {
-            await updateOwnPost(id, user.username, password, form.title, form.content);
-            closeModal();
-            toast.success('게시글이 수정되었습니다.');
-            navigate(PATHS.POST_DETAIL(id));
-        } catch (err) {
-            console.error(err);
-            setModalError('비밀번호가 일치하지 않거나 수정에 실패했습니다.');
-            setSubmitting(false);
-        }
-    };
+            // 새로 선택한 이미지가 있으면 먼저 업로드
+            if (imageFile) {
+                setUploading(true);
+                imageUrl = await uploadImage(imageFile);
+                setUploading(false);
+            }
 
-    const handleConfirmDelete = async () => {
-        if (!id) return;
-        if (!password) {
-            setModalError('비밀번호를 입력하세요.');
-            return;
-        }
-        setSubmitting(true);
-        setModalError('');
-        try {
-            await deleteOwnPost(id, user.username, password);
-            closeModal();
-            toast.success('게시글이 삭제되었습니다.');
-            navigate(PATHS.HOME ?? '/');
+            if (isEdit && id) {
+                const pw = prompt('비밀번호를 입력하세요');
+                if (!pw) return;
+                await updateOwnPost(id, user.username, pw, form.title, form.content, imageUrl);
+                navigate(PATHS.POST_DETAIL(id));
+            } else {
+                const newPost = await createPost({ ...form, image_url: imageUrl });
+                navigate(PATHS.POST_DETAIL(newPost.id));
+            }
         } catch (err) {
+            setUploading(false);
             console.error(err);
-            setModalError('비밀번호가 일치하지 않거나 삭제에 실패했습니다.');
-            setSubmitting(false);
+            setError('저장에 실패했습니다. (수정 시 비밀번호를 확인해주세요)');
         }
     };
 
     return (
-        <div className="max-w-[720px] mx-auto">
-            <div className="bg-white rounded-2xl shadow-sm border border-[#E7E5DF] p-8 md:p-10">
-                <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl md:text-[28px] font-bold text-[#1C1917] tracking-[-0.01em]">
-                        {isEdit ? '글 수정' : '글쓰기'}
-                    </h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-[#E7E5DF] p-8">
+            <h2 className="text-xl font-bold text-[#1C1917] mb-6">{isEdit ? '글 수정' : '글쓰기'}</h2>
 
-                    {isEdit && (
-                        <button
-                            type="button"
-                            onClick={() => setModalMode('delete')}
-                            className="text-sm font-medium text-[#DC2626] hover:underline"
-                        >
-                            삭제
-                        </button>
+            {error && (
+                <div className="mb-5 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-[#DC2626] text-sm">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <Input
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="제목"
+                />
+
+                <select
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value as any })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#E7E5DF] bg-white text-[#1C1917] outline-none focus:ring-2 focus:ring-[#5B5BD6]"
+                >
+                    {CATEGORIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                    ))}
+                </select>
+
+                <textarea
+                    value={form.content}
+                    onChange={(e) => setForm({ ...form, content: e.target.value })}
+                    placeholder="내용을 입력하세요"
+                    rows={10}
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#E7E5DF] bg-white text-[#1C1917] placeholder:text-[#78716C] outline-none resize-none transition-shadow duration-150 focus:ring-2 focus:ring-[#5B5BD6] focus:border-[#5B5BD6]"
+                />
+
+                {/* 이미지 업로드 */}
+                <div>
+                    <p className="text-xs text-[#78716C] mb-2">이미지 (선택, 최대 5MB)</p>
+                    {imagePreview ? (
+                        <div className="relative inline-block">
+                            <img
+                                src={imagePreview}
+                                alt="미리보기"
+                                className="max-h-56 rounded-xl border border-[#E7E5DF] object-cover"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleRemoveImage}
+                                className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-[#1C1917] text-white text-sm flex items-center justify-center"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    ) : (
+                        <label className="flex items-center justify-center h-32 rounded-xl border-2 border-dashed border-[#E7E5DF] text-sm text-[#78716C] cursor-pointer hover:bg-[#F6F4EF] transition-colors duration-150">
+                            이미지를 선택하세요
+                            <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                        </label>
                     )}
                 </div>
 
-                {error && (
-                    <div className="mb-6 px-4 py-3.5 rounded-xl bg-red-50 border border-red-200 text-[#DC2626] text-sm">
-                        {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    <Input
-                        value={form.title}
-                        onChange={(e) => setForm({ ...form, title: e.target.value })}
-                        placeholder="제목"
-                        className="text-lg font-medium"
-                    />
-
-                    <div>
-                        <p className="text-sm text-[#78716C] mb-2.5">카테고리</p>
-                        <div className="flex flex-wrap gap-2">
-                            {CATEGORIES.map((c) => {
-                                const style = getCategoryStyle(c);
-                                const selected = form.category === c;
-                                return (
-                                    <button
-                                        key={c}
-                                        type="button"
-                                        onClick={() => setForm({ ...form, category: c as any })}
-                                        className={`px-3.5 py-2 rounded-full text-[13px] font-semibold transition-all duration-150 ${
-                                            selected
-                                                ? `${style.bg} ${style.text} ring-2 ring-offset-1 ring-current`
-                                                : 'bg-white border border-[#E7E5DF] text-[#78716C] hover:bg-[#F6F4EF]'
-                                        }`}
-                                    >
-                                        {c}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <textarea
-                        value={form.content}
-                        onChange={(e) => setForm({ ...form, content: e.target.value })}
-                        placeholder="내용을 입력하세요"
-                        rows={14}
-                        className="w-full px-4 py-3.5 rounded-xl border border-[#E7E5DF] bg-white text-[15px] leading-relaxed text-[#1C1917] placeholder:text-[#78716C] outline-none resize-none transition-shadow duration-150 focus:ring-2 focus:ring-[#5B5BD6] focus:border-[#5B5BD6]"
-                    />
-                    <div className="flex justify-end pt-2">
-                        <Button type="submit" variant="primary">{isEdit ? '수정' : '작성'}</Button>
-                    </div>
-                </form>
-            </div>
-
-            {/* 수정 확인 모달 */}
-            <Modal
-                open={modalMode === 'edit'}
-                title="비밀번호 확인"
-                onClose={closeModal}
-                footer={
-                    <>
-                        <Button variant="default" onClick={closeModal}>취소</Button>
-                        <Button variant="primary" onClick={handleConfirmEdit} disabled={submitting}>
-                            {submitting ? '처리 중...' : '확인'}
-                        </Button>
-                    </>
-                }
-            >
-                <p className="text-[15px] text-[#78716C] mb-4">글을 수정하려면 비밀번호를 입력하세요.</p>
-                <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="비밀번호"
-                    autoFocus
-                />
-                {modalError && <p className="mt-2.5 text-sm text-[#DC2626]">{modalError}</p>}
-            </Modal>
-
-            {/* 삭제 확인 모달 */}
-            <Modal
-                open={modalMode === 'delete'}
-                title="게시글 삭제"
-                onClose={closeModal}
-                footer={
-                    <>
-                        <Button variant="default" onClick={closeModal}>취소</Button>
-                        <Button variant="danger" onClick={handleConfirmDelete} disabled={submitting}>
-                            {submitting ? '삭제 중...' : '삭제'}
-                        </Button>
-                    </>
-                }
-            >
-                <p className="text-[15px] text-[#78716C] mb-4">
-                    정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-                </p>
-                <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="비밀번호"
-                    autoFocus
-                />
-                {modalError && <p className="mt-2.5 text-sm text-[#DC2626]">{modalError}</p>}
-            </Modal>
+                <div className="flex justify-end">
+                    <Button type="submit" variant="primary" disabled={uploading}>
+                        {uploading ? '업로드 중...' : isEdit ? '수정' : '작성'}
+                    </Button>
+                </div>
+            </form>
         </div>
     );
 }

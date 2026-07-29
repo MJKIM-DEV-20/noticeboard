@@ -1,4 +1,4 @@
-// src/context/authcontext.tsx
+// src/contexts/AuthContext.tsx
 import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
 import * as authApi from '../api/auth';
 import type { User } from '../type/type';
@@ -8,7 +8,7 @@ interface AuthContextType {
     loading: boolean;
     signUp: (username: string, password: string) => Promise<void>;
     signIn: (username: string, password: string) => Promise<void>;
-    signOut: () => void;
+    signOut: () => Promise<void>;
     updateUser: (user: User) => void;
 }
 
@@ -18,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // 앱 최초 로드 시, httpOnly 쿠키에 담긴 세션으로 로그인 상태를 서버에 확인
     useEffect(() => {
         authApi.getMe()
             .then(setUser)
@@ -38,8 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(loggedInUser);
     };
 
-    const signOut = () => {
-        authApi.logout();
+    const signOut = async () => {
+        await authApi.logout();
         setUser(null);
     };
 

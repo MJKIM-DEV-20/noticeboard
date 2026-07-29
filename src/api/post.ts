@@ -1,18 +1,5 @@
 import type { Post, PostInput } from '../type/type';
 
-// 로그인 필요한 요청에 자체 발급 토큰(JWT)을 Authorization 헤더로 실어 보냄
-function authHeader(): Record<string, string> {
-    const saved = localStorage.getItem('user');
-    if (!saved) return {};
-
-    try {
-        const user = JSON.parse(saved);
-        return user.token ? { Authorization: `Bearer ${user.token}` } : {};
-    } catch {
-        return {};
-    }
-}
-
 export async function getPost(id: string): Promise<Post> {
     const res = await fetch(`/api/post/${id}`);
     if (!res.ok) throw new Error('게시글을 찾을 수 없습니다.');
@@ -47,21 +34,18 @@ export async function getMyPosts(
     page: number,
     pageSize: number,
 ): Promise<{ posts: Post[]; totalCount: number }> {
-    const headers = authHeader();
     const res = await fetch(`/api/post/mine?page=${page}&pageSize=${pageSize}`, {
-        headers,
+        credentials: 'include', // httpOnly 쿠키(token)를 요청에 실어 보냄
     });
     if (!res.ok) throw new Error('내 글 목록 조회 실패');
     return res.json();
 }
 
 export async function createPost(post: PostInput): Promise<Post> {
-    const headers = authHeader();
-    if (!headers.Authorization) throw new Error('로그인이 필요합니다.');
-
     const res = await fetch('/api/post', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(post),
     });
 
@@ -91,6 +75,7 @@ export async function updateOwnPost(
     password: string,
     newTitle: string,
     newContent: string,
+    imageUrl?: string | null,
 ) {
     const res = await fetch(`/api/post/${postId}`, {
         method: 'PATCH',
@@ -100,6 +85,7 @@ export async function updateOwnPost(
             password,
             title: newTitle,
             content: newContent,
+            ...(imageUrl !== undefined ? { image_url: imageUrl } : {}),
         }),
     });
 

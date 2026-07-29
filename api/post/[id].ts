@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const { data, error } = await supabase
                 .from("posts")
                 .select(
-                    "id, title, content, category, is_notice, created_at, updated_at, views, user_id, users(username)"
+                    "id, title, content, category, is_notice, created_at, updated_at, views, user_id, image_url, users(username)"
                 )
                 .eq("id", id)
                 .single();
@@ -104,7 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // ── 비회원 글 수정 (아이디/비밀번호로 검증) ──
         if (req.method === "PATCH") {
-            const { username, password, title, content } = req.body ?? {};
+            const { username, password, title, content, image_url } = req.body ?? {};
 
             if (!username || !password) {
                 return res.status(400).json({ error: "아이디와 비밀번호를 입력해주세요." });
@@ -120,7 +120,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const { error } = await supabase
                 .from("posts")
-                .update({ title, content, updated_at: new Date().toISOString() })
+                .update({
+                    title,
+                    content,
+                    ...(image_url !== undefined ? { image_url } : {}),
+                    updated_at: new Date().toISOString(),
+                })
                 .eq("id", id);
 
             if (error) {
