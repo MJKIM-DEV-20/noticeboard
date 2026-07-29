@@ -14,11 +14,27 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function loadStoredUser(): User | null {
+    const saved = localStorage.getItem('user');
+    if (!saved) return null;
+
+    try {
+        const parsed = JSON.parse(saved);
+        // 신규 인증 방식(JWT) 이전에 저장된 로그인 정보는 token이 없어 API 인증이 불가능하므로
+        // 로그인 안 된 상태로 취급하고 저장된 값도 정리한다.
+        if (!parsed.token) {
+            localStorage.removeItem('user');
+            return null;
+        }
+        return parsed;
+    } catch {
+        localStorage.removeItem('user');
+        return null;
+    }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(() => {
-        const saved = localStorage.getItem('user');
-        return saved ? JSON.parse(saved) : null;
-    });
+    const [user, setUser] = useState<User | null>(loadStoredUser);
 
     const loading = false;
 
