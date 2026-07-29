@@ -2,6 +2,7 @@
 export interface User {
     id: string;
     username: string;
+    token?: string;
 }
 
 export const CATEGORIES = ['일상잡담', '음식이야기', '랜덤에피소드', '회사생활', '소소한고민'] as const;

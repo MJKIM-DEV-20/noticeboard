@@ -45,7 +45,7 @@ export default function PostForm() {
                 await updateOwnPost(id, user.username, pw, form.title, form.content);
                 navigate(PATHS.POST_DETAIL(id));
             } else {
-                const newPost = await createPost(form, user.id);
+                const newPost = await createPost(form);
                 navigate(PATHS.POST_DETAIL(newPost.id));
             }
         } catch (err) {

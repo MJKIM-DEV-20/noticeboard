@@ -30,7 +30,7 @@ export default function MyPage() {
     useEffect(() => {
         if (user) {
             setLoading(true);
-            getMyPosts(user.id, page, PAGE_SIZE)
+            getMyPosts(page, PAGE_SIZE)
                 .then(({ posts, totalCount }) => {
                     setMyPosts(posts);
                     setTotalCount(totalCount);
