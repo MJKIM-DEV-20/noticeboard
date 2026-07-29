@@ -32,17 +32,6 @@ export default function PostList() {
     }, [page, search, category]);
 
 
-    // useEffect(() => {
-    //     setLoading(true);
-    //     getPosts(page, PAGE_SIZE, search)
-    //         .then(({ posts, totalCount }) => {
-    //             setPosts(posts);
-    //             setTotalCount(totalCount);
-    //         })
-    //         .catch((err) => console.error('getPosts error:', err))
-    //         .finally(() => setLoading(false));
-    // }, [page, search]);
-
     const setPage = (p: number) => {
         setSearchParams((prev) => {
             const next = new URLSearchParams(prev);
