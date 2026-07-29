@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.tsx
+// src/context/authcontext.tsx
 import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
 import * as authApi from '../api/auth';
 import type { User } from '../type/type';
@@ -14,34 +14,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function loadStoredUser(): User | null {
-    const saved = localStorage.getItem('user');
-    if (!saved) return null;
-
-    try {
-        const parsed = JSON.parse(saved);
-        // 신규 인증 방식(JWT) 이전에 저장된 로그인 정보는 token이 없어 API 인증이 불가능하므로
-        // 로그인 안 된 상태로 취급하고 저장된 값도 정리한다.
-        if (!parsed.token) {
-            localStorage.removeItem('user');
-            return null;
-        }
-        return parsed;
-    } catch {
-        localStorage.removeItem('user');
-        return null;
-    }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(loadStoredUser);
-
-    const loading = false;
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (user) localStorage.setItem('user', JSON.stringify(user));
-        else localStorage.removeItem('user');
-    }, [user]);
+        authApi.getMe()
+            .then(setUser)
+            .finally(() => setLoading(false));
+    }, []);
 
     const updateUser = (updatedUser: User) => {
         setUser(updatedUser);
@@ -57,7 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(loggedInUser);
     };
 
-    const signOut = () => setUser(null);
+    const signOut = () => {
+        authApi.logout();
+        setUser(null);
+    };
 
     return (
         <AuthContext.Provider value={{ user, signUp, signIn, signOut, loading, updateUser }}>

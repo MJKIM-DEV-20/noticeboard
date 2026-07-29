@@ -2,14 +2,39 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { stringifySetCookie } from "cookie";
 
 const supabase = createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function issueToken(userId: string, username: string) {
-    return jwt.sign({ userId, username }, process.env.JWT_SECRET!, { expiresIn: "7d" });
+function issueToken(userId: string, username: string, isAdmin: boolean) {
+    return jwt.sign({ userId, username, isAdmin }, process.env.JWT_SECRET!, { expiresIn: "7d" });
+}
+
+function setTokenCookie(res: VercelResponse, token: string) {
+    res.setHeader("Set-Cookie", stringifySetCookie({
+        name: "token",
+        value: token,
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+    }));
+}
+
+function clearTokenCookie(res: VercelResponse) {
+    res.setHeader("Set-Cookie", stringifySetCookie({
+        name: "token",
+        value: "",
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+        path: "/",
+        maxAge: 0,
+    }));
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -29,7 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const { data, error } = await supabase
                 .from("users")
                 .insert({ username, password: hashedPassword })
-                .select("id, username")
+                .select("id, username, is_admin")
                 .single();
 
             if (error) {
@@ -37,8 +62,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(409).json({ error: "이미 존재하는 아이디입니다." });
             }
 
-            const token = issueToken(data.id, data.username);
-            return res.status(201).json({ ...data, token });
+            const token = issueToken(data.id, data.username, data.is_admin ?? false);
+            setTokenCookie(res, token);
+            return res.status(201).json({ id: data.id, username: data.username, is_admin: data.is_admin ?? false });
         }
 
         // ── 로그인 ──
@@ -51,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const { data, error } = await supabase
                 .from("users")
-                .select("id, username, password")
+                .select("id, username, password, is_admin")
                 .eq("username", username)
                 .single();
 
@@ -64,10 +90,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             let isValid = false;
 
             if (isHashed) {
-                // 이미 해시로 저장된 비밀번호 → 정상 비교
                 isValid = await bcrypt.compare(password, data.password);
             } else {
-                // 기존 평문 비밀번호(더미 데이터 등) → 평문 비교 후, 맞으면 해시로 자동 전환
                 isValid = password === data.password;
                 if (isValid) {
                     const newHash = await bcrypt.hash(password, 10);
@@ -79,12 +103,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(401).json({ error: "아이디 또는 비밀번호가 일치하지 않습니다." });
             }
 
-            // 비밀번호(해시)는 절대 클라이언트로 내려보내지 않음
-            const token = issueToken(data.id, data.username);
-            return res.status(200).json({ id: data.id, username: data.username, token });
+            const token = issueToken(data.id, data.username, data.is_admin ?? false);
+            setTokenCookie(res, token);
+            return res.status(200).json({ id: data.id, username: data.username, is_admin: data.is_admin ?? false });
         }
 
-        // ── 닉네임 변경 (본인 확인 후 변경) ──
+        // ── 로그인 상태 확인 ──
+        if (req.method === "GET" && action === "me") {
+            const token = req.cookies?.token;
+            if (!token) {
+                return res.status(200).json({ user: null });
+            }
+
+            try {
+                const payload = jwt.verify(token, process.env.JWT_SECRET!) as {
+                    userId: string; username: string; isAdmin: boolean;
+                };
+                return res.status(200).json({
+                    user: { id: payload.userId, username: payload.username, is_admin: payload.isAdmin },
+                });
+            } catch {
+                clearTokenCookie(res);
+                return res.status(200).json({ user: null });
+            }
+        }
+
+        // ── 로그아웃 ──
+        if (req.method === "POST" && action === "logout") {
+            clearTokenCookie(res);
+            return res.status(200).json({ success: true });
+        }
+
+        // ── 닉네임 변경 ──
         if (req.method === "PATCH" && action === "update-username") {
             const { userId, password, newUsername } = req.body ?? {};
 
@@ -94,7 +144,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const { data: userData, error: fetchError } = await supabase
                 .from("users")
-                .select("password")
+                .select("password, is_admin")
                 .eq("id", userId)
                 .single();
 
@@ -116,6 +166,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 console.error("닉네임 변경 에러:", updateError);
                 return res.status(500).json({ error: updateError.message });
             }
+
+            const newToken = issueToken(userId, newUsername, userData.is_admin ?? false);
+            setTokenCookie(res, newToken);
 
             return res.status(200).json({ success: true });
         }

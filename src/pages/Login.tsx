@@ -5,6 +5,8 @@ import { validateAuth } from '../utils/validation';
 import { PATHS} from "../router/path.ts";
 import Button from "../components/button.tsx";
 import Input from "../components/Input.tsx";
+import toast from 'react-hot-toast';
+
 
 export default function Login() {
     const [id, setId] = useState('');
@@ -25,6 +27,7 @@ export default function Login() {
 
         try {
             await signIn(id, password);
+            toast.success(`환영합니다!`);
             navigate(PATHS.POSTS);
         } catch (err) {
             console.error(err);
@@ -33,32 +36,34 @@ export default function Login() {
     };
 
     return (
-        <div className="max-w-sm mx-auto mt-16 bg-white rounded-2xl shadow-sm border border-[#E7E5DF] p-8">
-            <h2 className="text-xl font-bold text-[#1C1917] mb-6 text-center">로그인</h2>
+        <div className="max-w-md mx-auto mt-20 px-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-[#E7E5DF] p-9 md:p-10">
+                <h2 className="text-2xl font-bold text-[#1C1917] mb-8 text-center tracking-[-0.01em]">로그인</h2>
 
-            {error && (
-                <div className="mb-5 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-[#DC2626] text-sm">
-                    {error}
-                </div>
-            )}
+                {error && (
+                    <div className="mb-6 px-4 py-3.5 rounded-xl bg-red-50 border border-red-200 text-[#DC2626] text-sm">
+                        {error}
+                    </div>
+                )}
 
-            <form onSubmit={handleSubmit} className="space-y-3">
-                <Input value={id} onChange={(e) => setId(e.target.value)} placeholder="아이디" />
-                <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="비밀번호"
-                />
-                <Button type="submit" variant="primary" className="w-full">로그인</Button>
-            </form>
+                <form onSubmit={handleSubmit} className="space-y-3.5">
+                    <Input value={id} onChange={(e) => setId(e.target.value)} placeholder="아이디" />
+                    <Input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="비밀번호"
+                    />
+                    <Button type="submit" variant="primary" className="w-full mt-2">로그인</Button>
+                </form>
 
-            <p className="text-center text-sm text-[#78716C] mt-5">
-                계정이 없으신가요?{' '}
-                <Link to={PATHS.SIGNUP} className="text-[#5B5BD6] hover:underline">
-                    회원가입
-                </Link>
-            </p>
+                <p className="text-center text-sm text-[#78716C] mt-7">
+                    계정이 없으신가요?{' '}
+                    <Link to={PATHS.SIGNUP} className="text-[#5B5BD6] font-medium hover:underline">
+                        회원가입
+                    </Link>
+                </p>
+            </div>
         </div>
     );
 }
