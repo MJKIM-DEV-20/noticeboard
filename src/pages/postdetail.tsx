@@ -39,29 +39,34 @@ export default function PostDetail() {
     const isOwner = user?.id === post.user_id;
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-[#E7E5DF] p-8">
-            <h2 className="text-2xl font-bold text-[#1C1917] break-words">{post.title}</h2>
-            <div className="flex items-center gap-2 text-sm text-[#78716C] mt-2 pb-4 border-b border-[#E7E5DF]">
-                <span>{post.users?.username ?? '알수없음'}</span>
-                <span>·</span>
-                <span>{new Date(post.created_at).toLocaleDateString()}</span>
-                <span>·</span>
-                <span>조회 {post.views}</span>
-            </div>
-            {post.image_url && (
-                <div className="mt-6 flex justify-center bg-[#F6F4EF] rounded-xl overflow-hidden">
-                    <img
-                        src={post.image_url}
-                        alt={post.title}
-                        className="max-h-[360px] w-auto object-contain"
-                    />
+        <div className="flex min-h-[600px] flex-col bg-white rounded-2xl shadow-sm border border-[#E7E5DF] p-8">
+            <div className="flex-1">
+                <h2 className="text-2xl font-bold text-[#1C1917] break-words">{post.title}</h2>
+                <div className="flex items-center gap-2 text-sm text-[#78716C] mt-2 pb-4 border-b border-[#E7E5DF]">
+                    <span>{post.users?.username ?? '알수없음'}</span>
+                    <span>·</span>
+                    <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                    <span>·</span>
+                    <span>조회 {post.views}</span>
                 </div>
-            )}
-            <p className="text-[#1C1917] leading-relaxed whitespace-pre-wrap break-words mt-6 mb-8">
-                {post.content}
-            </p>
+
+                {post.image_url && (
+                    <div className="mt-6 flex justify-center items-center h-[360px] bg-[#F6F4EF] rounded-xl overflow-hidden">
+                        <img
+                            src={post.image_url}
+                            alt={post.title}
+                            className="max-h-full max-w-full object-contain"
+                        />
+                    </div>
+                )}
+
+                <p className="text-[#1C1917] leading-relaxed whitespace-pre-wrap break-words mt-6">
+                    {post.content}
+                </p>
+            </div>
+
             {isOwner && (
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-end mt-8">
                     <Button variant="default" onClick={handleEdit}>수정</Button>
                     <Button variant="danger" onClick={handleDelete}>삭제</Button>
                 </div>
