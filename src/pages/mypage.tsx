@@ -1,17 +1,19 @@
 // src/imports/mypage.tsx
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
-import { useAuth} from "../context/authcontext.tsx";
+import { useAuth } from "../context/authcontext.tsx";
 import { getMyPosts } from '../api/post';
 import { updateUsername } from '../api/auth';
 import { isAdminLikeUsername } from '../utils/validation';
-import { PATHS} from "../router/path.ts";
+import { PATHS } from "../router/path.ts";
 import type { Post } from '../type/type';
+import Input from "../components/Input.tsx";
+import Button from "../components/button.tsx";
+import { Modal } from "../components/Modal.tsx";
+import toast from 'react-hot-toast';
 
 const PAGE_SIZE = 8;
 const GROUP_SIZE = 5;
-
-
 
 export default function MyPage() {
     const { user, updateUser } = useAuth();
@@ -20,10 +22,11 @@ export default function MyPage() {
     const [loading, setLoading] = useState(true);
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const [editing, setEditing] = useState(false);
+    const [editModalOpen, setEditModalOpen] = useState(false);
     const [newUsername, setNewUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [modalError, setModalError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
     const page = Number(searchParams.get('page') ?? '1');
 
@@ -49,34 +52,44 @@ export default function MyPage() {
         });
     };
 
-
     function truncateText(text: string, maxLength: number) {
         if (text.length <= maxLength) return text;
         return text.slice(0, maxLength) + '...';
     }
 
+    const closeModal = () => {
+        setEditModalOpen(false);
+        setNewUsername('');
+        setPassword('');
+        setModalError('');
+        setSubmitting(false);
+    };
 
-    const handleUpdateUsername = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
+    const handleUpdateUsername = async () => {
+        setModalError('');
 
         if (!newUsername.trim()) {
-            setError('새 아이디를 입력해주세요.');
+            setModalError('새 아이디를 입력해주세요.');
             return;
         }
         if (isAdminLikeUsername(newUsername)) {
-            setError('사용할 수 없는 아이디입니다.');
+            setModalError('사용할 수 없는 아이디입니다.');
+            return;
+        }
+        if (!password) {
+            setModalError('비밀번호를 입력해주세요.');
             return;
         }
 
+        setSubmitting(true);
         try {
             await updateUsername(user.id, password, newUsername);
             updateUser({ ...user, username: newUsername });
-            setEditing(false);
-            setPassword('');
-            setNewUsername('');
+            closeModal();
+            toast.success('닉네임이 변경되었습니다.');
         } catch (err: any) {
-            setError(err.message ?? '변경에 실패했습니다.');
+            setModalError(err.message ?? '변경에 실패했습니다.');
+            setSubmitting(false);
         }
     };
 
@@ -89,69 +102,39 @@ export default function MyPage() {
     );
 
     return (
-        <div className="space-y-8">
-            <section className="bg-white rounded-2xl shadow-sm border border-[#E7E5DF] p-6">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-[#5B5BD6] text-white flex items-center justify-center text-xl font-bold shrink-0">
-                        {user.username.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                        <p className="font-bold text-[#1C1917] text-lg">{user.username}</p>
-                        <p className="text-sm text-[#78716C]">내 계정</p>
-                    </div>
-                </div>
-
-                {editing ? (
-                    <form onSubmit={handleUpdateUsername} className="mt-4 pt-4 border-t border-[#E7E5DF] space-y-3">
-                        {error && <p className="text-xs text-[#DC2626]">{error}</p>}
-                        <div>
-                            <p className="text-xs text-[#78716C] mb-1">수정할 닉네임을 입력하시오</p>
-                            <input
-                                value={newUsername}
-                                onChange={(e) => setNewUsername(e.target.value)}
-                                placeholder="새 닉네임"
-                                className="w-full px-3 py-2 rounded-lg border border-[#E7E5DF] text-sm outline-none focus:ring-2 focus:ring-[#5B5BD6]"
-                            />
+        <div className="max-w-[720px] mx-auto px-4 space-y-10">
+            <section className="bg-white rounded-2xl shadow-sm border border-[#E7E5DF] p-7 md:p-8">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                        <div className="w-20 h-20 rounded-full bg-[#5B5BD6] text-white flex items-center justify-center text-2xl font-bold shrink-0">
+                            {user.username.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <p className="text-xs text-[#78716C] mb-1">현재 비밀번호를 입력하시오</p>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="비밀번호"
-                                className="w-full px-3 py-2 rounded-lg border border-[#E7E5DF] text-sm outline-none focus:ring-2 focus:ring-[#5B5BD6]"
-                            />
+                            <p className="font-bold text-[#1C1917] text-xl tracking-[-0.01em]">{user.username}</p>
+                            <p className="text-sm text-[#78716C] mt-0.5">내 계정</p>
                         </div>
-                        <div className="flex gap-3">
-                            <button type="submit" className="text-sm text-[#5B5BD6] font-medium">저장</button>
-                            <button
-                                type="button"
-                                onClick={() => { setEditing(false); setError(''); }}
-                                className="text-sm text-[#78716C]"
-                            >
-                                취소
-                            </button>
-                        </div>
-                    </form>
-                ) : (
-                    <button
-                        onClick={() => setEditing(true)}
-                        className="text-xs text-[#5B5BD6] mt-3 pt-3 border-t border-[#E7E5DF] w-full text-left"
-                    >
+                    </div>
+                    <Button variant="default" onClick={() => setEditModalOpen(true)}>
                         닉네임 변경
-                    </button>
-                )}
+                    </Button>
+                </div>
             </section>
 
             <section>
-                <h2 className="text-lg font-bold text-[#1C1917] mb-3">
+                <h2 className="text-xl font-bold text-[#1C1917] mb-4 tracking-[-0.01em]">
                     내가 쓴 게시글 {!loading && `(${totalCount})`}
                 </h2>
                 {loading ? (
-                    <p className="text-[#78716C] text-sm">로딩중...</p>
+                    <div className="bg-white rounded-2xl border border-[#E7E5DF] shadow-sm overflow-hidden divide-y divide-[#E7E5DF]">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="px-6 py-5 flex items-center justify-between">
+                                <div className="h-4 w-2/3 rounded bg-[#E7E5DF] animate-pulse" />
+                                <div className="h-4 w-16 rounded bg-[#E7E5DF] animate-pulse shrink-0 ml-4" />
+                            </div>
+                        ))}
+                    </div>
                 ) : myPosts.length === 0 ? (
-                    <p className="text-[#78716C] text-sm py-8 text-center bg-white rounded-2xl border border-[#E7E5DF]">
+                    <p className="text-[#78716C] text-sm py-10 text-center bg-white rounded-2xl border border-[#E7E5DF]">
                         작성한 게시글이 없습니다.
                     </p>
                 ) : (
@@ -161,21 +144,21 @@ export default function MyPage() {
                                 <Link
                                     key={post.id}
                                     to={PATHS.POST_DETAIL(post.id)}
-                                    className="flex items-center justify-between px-5 py-4 hover:bg-[#F6F4EF] transition-colors duration-150"
+                                    className="flex items-center justify-between px-6 py-5 hover:bg-[#F6F4EF] transition-colors duration-150"
                                 >
-                                    <span className="text-[#1C1917] font-medium truncate">{truncateText(post.title, 30)}</span>
+                                    <span className="text-[16px] text-[#1C1917] font-semibold truncate">{truncateText(post.title, 30)}</span>
                                     <span className="text-[#78716C] text-sm shrink-0 ml-4">
-                    {new Date(post.created_at).toLocaleDateString()}
-                  </span>
+                                        {new Date(post.created_at).toLocaleDateString()}
+                                    </span>
                                 </Link>
                             ))}
                         </div>
                         {totalPages > 1 && (
-                            <div className="flex justify-center gap-1.5 mt-6">
+                            <div className="flex justify-center gap-1.5 mt-8">
                                 <button
                                     onClick={() => setPage(groupStart - 1)}
                                     disabled={groupStart === 1}
-                                    className="w-9 h-9 rounded-lg border border-[#E7E5DF] bg-white text-[#1C1917] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F6F4EF] transition-colors duration-150"
+                                    className="w-10 h-10 rounded-lg border border-[#E7E5DF] bg-white text-[#1C1917] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F6F4EF] transition-colors duration-150"
                                 >
                                     ‹
                                 </button>
@@ -183,7 +166,7 @@ export default function MyPage() {
                                     <button
                                         key={p}
                                         onClick={() => setPage(p)}
-                                        className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors duration-150 ${
+                                        className={`w-10 h-10 rounded-lg text-sm font-semibold transition-colors duration-150 ${
                                             p === page
                                                 ? 'bg-[#5B5BD6] text-white'
                                                 : 'bg-white border border-[#E7E5DF] text-[#1C1917] hover:bg-[#F6F4EF]'
@@ -195,7 +178,7 @@ export default function MyPage() {
                                 <button
                                     onClick={() => setPage(groupEnd + 1)}
                                     disabled={groupEnd === totalPages}
-                                    className="w-9 h-9 rounded-lg border border-[#E7E5DF] bg-white text-[#1C1917] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F6F4EF] transition-colors duration-150"
+                                    className="w-10 h-10 rounded-lg border border-[#E7E5DF] bg-white text-[#1C1917] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F6F4EF] transition-colors duration-150"
                                 >
                                     ›
                                 </button>
@@ -204,6 +187,42 @@ export default function MyPage() {
                     </>
                 )}
             </section>
+
+            <Modal
+                open={editModalOpen}
+                title="닉네임 변경"
+                onClose={closeModal}
+                footer={
+                    <>
+                        <Button variant="default" onClick={closeModal}>취소</Button>
+                        <Button variant="primary" onClick={handleUpdateUsername} disabled={submitting}>
+                            {submitting ? '처리 중...' : '저장'}
+                        </Button>
+                    </>
+                }
+            >
+                <div className="space-y-4">
+                    <div>
+                        <p className="text-sm text-[#78716C] mb-1.5">수정할 닉네임을 입력하시오</p>
+                        <Input
+                            value={newUsername}
+                            onChange={(e) => setNewUsername(e.target.value)}
+                            placeholder="새 닉네임"
+                            autoFocus
+                        />
+                    </div>
+                    <div>
+                        <p className="text-sm text-[#78716C] mb-1.5">현재 비밀번호를 입력하시오</p>
+                        <Input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="비밀번호"
+                        />
+                    </div>
+                    {modalError && <p className="text-sm text-[#DC2626]">{modalError}</p>}
+                </div>
+            </Modal>
         </div>
     );
 }

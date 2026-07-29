@@ -55,16 +55,16 @@ export const Modal = ({
         >
             <div
                 ref={contentRef}
-                className="w-full max-w-[600px] max-h-[90vh] overflow-y-auto rounded-[14px] bg-white"
+                className="w-full max-w-[560px] max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-xl"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="modal-title"
             >
                 {/* Modal Head */}
-                <div className="flex items-center justify-between border-b px-6 py-5">
+                <div className="flex items-center justify-between border-b border-[#E7E5DF] px-7 py-6">
                     <h3
                         id="modal-title"
-                        className="text-[17px] font-extrabold tracking-[-0.01em]"
+                        className="text-[19px] font-bold tracking-[-0.01em] text-[#1C1917]"
                     >
                         {title}
                     </h3>
@@ -72,18 +72,18 @@ export const Modal = ({
                     <button
                         onClick={onClose}
                         aria-label="닫기"
-                        className="bg-transparent px-2 py-1 text-[22px] leading-none text-gray-400 hover:text-gray-600"
+                        className="bg-transparent px-2 py-1 text-[24px] leading-none text-[#78716C] hover:text-[#1C1917] transition-colors duration-150"
                     >
                         ×
                     </button>
                 </div>
 
                 {/* Modal Body */}
-                <div className="px-6 py-[22px]">{children}</div>
+                <div className="px-7 py-6">{children}</div>
 
                 {/* Modal Footer */}
                 {footer && (
-                    <div className="flex justify-end gap-2 border-t px-6 py-[18px]">
+                    <div className="flex justify-end gap-2.5 border-t border-[#E7E5DF] px-7 py-5">
                         {footer}
                     </div>
                 )}
