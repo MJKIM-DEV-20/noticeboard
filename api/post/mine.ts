@@ -8,8 +8,7 @@ const supabase = createClient(
 );
 
 function getUserFromRequest(req: VercelRequest): { userId: string; username: string } | null {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.replace("Bearer ", "");
+    const token = req.cookies?.token;
     if (!token) return null;
 
     try {
@@ -44,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .select("id, title, category, is_notice, created_at, views, users(username)", {
                 count: "exact",
             })
-            .eq("user_id", user.userId) // 토큰에서 검증된 본인 글만
+            .eq("user_id", user.userId) // 쿠키에서 검증된 본인 글만
             .order("created_at", { ascending: false })
             .range(from, to);
 
